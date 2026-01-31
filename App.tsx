@@ -1,6 +1,7 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Home from './screens/Home';
 import Scan from './screens/Scan';
 import Rewards from './screens/Rewards';
@@ -12,23 +13,12 @@ import StoreFinder from './screens/StoreFinder';
 import Coupons from './screens/Coupons';
 import Settings from './screens/Settings';
 import Login from './screens/Login';
+import Register from './screens/Register';
 import ForgotPassword from './screens/ForgotPassword';
 import Navbar from './components/Navbar';
-import { User } from './types';
 
 const App: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const [user, setUser] = useState<User>({
-    name: 'อเล็กซ์ จอห์นสัน',
-    tier: 'Platinum',
-    memberSince: '2023',
-    points: 4250,
-    walletBalance: 1240.50,
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBlYvFoqSDUxOAnBxwGGtCvdgMEzqRY-vU9tzWNOIgy5QHhYYqC2zSU-LtzAAkZ6stX5jCsgSvO1_QSxcb_N0QFUowBUtIjhugEjw7_rp_Ele9evcJuOQfPVTh4gxIS4Na12G-slm1AK_4R6hjeh2Db7ywOHP-LHKoCtPo0hJDJlwgQ7571Cms90SxMSGGYHs9r0ca-W461C-EwJBVz0NWu6Rk61-aUjohKWKNTHjqUR4ddNbDSvQkC0BO_RNoeK0AyztC-7C2zUzed'
-  });
-
-  const handleLogin = () => setIsLoggedIn(true);
-  const handleLogout = () => setIsLoggedIn(false);
+  const { isLoggedIn, user } = useAuth();
 
   return (
     <Router>
@@ -44,26 +34,21 @@ const App: React.FC = () => {
 
           <div className="relative z-10 flex flex-col flex-1">
             <Routes>
-              <Route path="/login" element={<Login onLogin={handleLogin} />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               
-              {isLoggedIn ? (
-                <>
-                  <Route path="/" element={<Home user={user} />} />
-                  <Route path="/scan" element={<Scan user={user} />} />
-                  <Route path="/rewards" element={<Rewards user={user} />} />
-                  <Route path="/wallet" element={<Wallet user={user} />} />
-                  <Route path="/profile" element={<Profile user={user} onLogout={handleLogout} />} />
-                  <Route path="/history" element={<History />} />
-                  <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/stores" element={<StoreFinder />} />
-                  <Route path="/coupons" element={<Coupons />} />
-                  <Route path="/settings" element={<Settings user={user} setUser={setUser} />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </>
-              ) : (
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              )}
+              <Route path="/" element={<ProtectedRoute><Home user={user!} /></ProtectedRoute>} />
+              <Route path="/scan" element={<ProtectedRoute><Scan user={user!} /></ProtectedRoute>} />
+              <Route path="/rewards" element={<ProtectedRoute><Rewards user={user!} /></ProtectedRoute>} />
+              <Route path="/wallet" element={<ProtectedRoute><Wallet user={user!} /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile user={user!} /></ProtectedRoute>} />
+              <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="/stores" element={<ProtectedRoute><StoreFinder /></ProtectedRoute>} />
+              <Route path="/coupons" element={<ProtectedRoute><Coupons /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings user={user!} /></ProtectedRoute>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
           {isLoggedIn && <Navbar />}

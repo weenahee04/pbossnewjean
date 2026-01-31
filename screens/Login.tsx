@@ -1,18 +1,46 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 
-interface LoginProps {
-  onLogin: () => void;
-}
+const loginSchema = z.object({
+  phone: z.string()
+    .min(10, 'กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก')
+    .regex(/^0[0-9]{9}$/, 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง'),
+  password: z.string()
+    .min(6, 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'),
+});
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+type LoginFormData = z.infer<typeof loginSchema>;
+
+const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onLogin();
-    navigate('/');
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      const response = await authService.login(data);
+      login(response.user, response.token);
+      toast.success('เข้าสู่ระบบสำเร็จ!');
+      navigate('/');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบเบอร์โทรและรหัสผ่าน';
+      toast.error(errorMessage);
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -34,17 +62,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">รางวัลและไลฟ์สไตล์</p>
         </div>
 
-        <form className="w-full space-y-8 mt-4" onSubmit={handleLoginSubmit}>
+        <form className="w-full space-y-8 mt-4" onSubmit={handleSubmit(onSubmit)}>
            <div className="space-y-1 relative">
              <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] absolute -top-2 left-0 bg-white pr-2 z-10">เบอร์โทรศัพท์มือถือ</label>
              <div className="flex items-center border-b-2 border-primary/20 focus-within:border-primary transition-all py-3 relative">
                 <span className="material-symbols-outlined text-gray-400 mr-4">smartphone</span>
                 <input 
+                  {...register('phone')}
                   type="tel" 
                   placeholder="08X XXX XXXX" 
                   className="bg-transparent border-none focus:ring-0 w-full text-xl font-bold p-0 placeholder-gray-200"
+                  disabled={isLoading}
                 />
              </div>
+             {errors.phone && (
+               <p className="text-red-500 text-xs font-bold mt-1">{errors.phone.message}</p>
+             )}
            </div>
 
            <div className="space-y-1 relative">
@@ -52,12 +85,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
              <div className="flex items-center border-b-2 border-primary/20 focus-within:border-primary transition-all py-3">
                 <span className="material-symbols-outlined text-gray-400 mr-4">lock</span>
                 <input 
-                  type="password" 
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••" 
                   className="bg-transparent border-none focus:ring-0 w-full text-xl font-bold p-0 placeholder-gray-200"
+                  disabled={isLoading}
                 />
-                <span className="material-symbols-outlined text-gray-400 cursor-pointer">visibility_off</span>
+                <span 
+                  className="material-symbols-outlined text-gray-400 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? 'visibility' : 'visibility_off'}
+                </span>
              </div>
+             {errors.password && (
+               <p className="text-red-500 text-xs font-bold mt-1">{errors.password.message}</p>
+             )}
            </div>
 
            <div className="flex justify-end -mt-4">
@@ -72,11 +115,32 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
            <button 
              type="submit"
-             className="w-full bg-primary hover:bg-primary-dark text-dark-green font-black text-lg py-5 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+             disabled={isLoading}
+             className="w-full bg-primary hover:bg-primary-dark text-dark-green font-black text-lg py-5 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
            >
-             เข้าสู่ระบบ
-             <span className="material-symbols-outlined font-black">arrow_forward</span>
+             {isLoading ? (
+               <>
+                 <div className="w-5 h-5 border-2 border-dark-green border-t-transparent rounded-full animate-spin"></div>
+                 กำลังเข้าสู่ระบบ...
+               </>
+             ) : (
+               <>
+                 เข้าสู่ระบบ
+                 <span className="material-symbols-outlined font-black">arrow_forward</span>
+               </>
+             )}
            </button>
+
+           <div className="text-center pt-4">
+             <button
+               type="button"
+               onClick={() => navigate('/register')}
+               className="text-primary hover:text-primary-dark font-medium transition-colors flex items-center justify-center gap-1 mx-auto"
+             >
+               <span className="material-icons text-sm">person_add</span>
+               ยังไม่มีบัญชี? สมัครสมาชิก
+             </button>
+           </div>
         </form>
       </div>
 

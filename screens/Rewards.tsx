@@ -1,78 +1,72 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useRewards } from '../contexts/RewardsContext';
+import { useDebounce } from '../hooks';
+import SkeletonCard from '../components/SkeletonCard';
+import toast from 'react-hot-toast';
 import { User, Reward } from '../types';
 
 interface RewardsProps {
   user: User;
 }
 
-const Rewards: React.FC<RewardsProps> = ({ user }) => {
+const Rewards: React.FC<RewardsProps> = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { rewards, isLoading, fetchRewards, redeemReward } = useRewards();
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   const categories = ['ทั้งหมด', 'อาหาร', 'เครื่องดื่ม', 'ไอที', 'ไลฟ์สไตล์'];
 
-  const rewards: Reward[] = [
-    {
-      id: 'r1',
-      title: 'คูปองสตาร์บัคส์ 300 บาท',
-      description: 'แลกคะแนนเพื่อรับคูปองแทนเงินสดสำหรับเครื่องดื่มที่สตาร์บัคส์ทุกสาขา',
-      points: 1000,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDFpHP7ypyvvPB2HdiLPAN61U09KAClGg9egyPVrQ1mabu-2ie1R4AiGH7VYdXwOnMpJ1lbwmtMngvQ_oUJP8Vdl4NxsNicAcVlVd7TgLSIYQxjHmEuPD16VPVnXkBg0oAo2jJ50FnswlxpgIox4sRXGsn9fSD_MVsVDzhrKPYwOQtHP-H_JQu5fz5NruPNIESZoTQ7xlWMSP7MSYP9qzhByMValV1WVGaOdPMvS274PsA1HQ52QfDMTHz3O9itq2RPlOUESMH8Iuy7',
-      category: 'เครื่องดื่ม',
-      isPopular: true
-    },
-    {
-      id: 'r2',
-      title: 'หูฟังตัดเสียงรบกวนไร้สาย',
-      description: 'หูฟังคุณภาพพรีเมียม พร้อมระบบตัดเสียงรบกวน แบตเตอรี่ใช้งานได้ 24 ชม.',
-      points: 15000,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCU2Y4J0wfgQkT0ySxZJby_8p-7zltsnSmwV3WGhmsbxmAkxccUFL9LhvUKunRhcq-2pn7kcdKFdmBS9yjdKb57EWY1qjXdjOhRAtnjP0LGaGRZj8CkQR4GLtwwOpeMXbEyjvwzNShCXnCIrbwHafESm68t-IYSfZ1b23Xca7XnfyfJdcHHlX-2QoaGnPLOYm9MQ_d4KE2bzMcDCF6qdhZm6RgKVq_pDq2EhxFJp3TQTST005bRCaxodU7uoEFl3-7RweXEupY3ck-n',
-      category: 'ไอที'
-    },
-    {
-      id: 'r3',
-      title: 'ชุดเบอร์เกอร์คิงสุดคุ้ม',
-      description: 'อิ่มอร่อยกับชุด Whopper Combo ที่สาขาที่ร่วมรายการ',
-      points: 2200,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD6LJYBHHFZSoQy3Wg_vzaY4q7StRQxRADyvCwr3oPbcE-wic6aYxSavAaRJj_hBIKpLbPaBP2n3OIZO5Nkhikp0Aeg9UXGfHt1bjUytNPxIl2tCpFhH50GI4iXzvzPqSopMwp-1XQwKL3xiYoiyo6nGyhaMBeC8iSrVYwWKH1ssDvhj_yKn2TmfdeMTgl6aWzo6zZ5o4_kPsTdioDBph4unqllG7hciiaLUJRt3r5n641neGh_VxTjy0_Sf4FEtssjdMk_DuWJedIk',
-      category: 'อาหาร',
-      isLimited: true
-    },
-    {
-      id: 'r4',
-      title: 'กระเป๋าผ้า Jespark Limited',
-      description: 'กระเป๋าผ้ารักษ์โลกดีไซน์พิเศษพกพาสะดวก',
-      points: 500,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBG37L70bR_WBhCnGfZIb4yXNNhIPCZoaRrZeKW2gsORJbZmucVKfkUAKX7gD0iZ1tgUIIE3rCkbiPZ2XmTRhfXzKXnn_FlOsyen70pSf9NzKNSwtBndBIfF0kZnjpwZlnCOgc8hMV7AKsZc5wcBJOzmivzLoUexPRIZuosVhv2NEUy7V1wIx4IAI8cL14i0i4jVnxhLrCg1ABE3n1J08m5K7QQgP_itD6WmvCaND3qsvKZHPF0tpwpWDXjjZQzdS93w9-vWszzx2e5',
-      category: 'ไลฟ์สไตล์'
-    }
-  ];
+  useEffect(() => {
+    fetchRewards({ category: activeCategory !== 'ทั้งหมด' ? activeCategory : undefined });
+  }, [activeCategory, fetchRewards]);
 
   const handleRedeem = (reward: Reward) => {
-    if (user.points >= reward.points) {
-      setSelectedReward(reward);
-      setShowSuccessModal(true);
+    if (!user || user.points < reward.points) {
+      toast.error('คะแนนของคุณไม่เพียงพอ');
+      return;
+    }
+    setSelectedReward(reward);
+    setShowSuccessModal(true);
+  };
+
+  const confirmRedeem = async () => {
+    if (!selectedReward) return;
+    
+    const success = await redeemReward(selectedReward.id);
+    if (success) {
+      setShowSuccessModal(false);
+      setSelectedReward(null);
     }
   };
 
-  const processedRewards = useMemo(() => {
-    let result = activeCategory === 'ทั้งหมด' 
-      ? [...rewards] 
-      : rewards.filter(r => r.category === activeCategory);
-
-    if (sortOrder === 'asc') {
-      result.sort((a, b) => a.points - b.points);
-    } else if (sortOrder === 'desc') {
-      result.sort((a, b) => b.points - a.points);
+  const filteredRewards = useMemo(() => {
+    let result = rewards;
+    
+    if (debouncedSearch) {
+      result = result.filter(r => 
+        r.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        r.description.toLowerCase().includes(debouncedSearch.toLowerCase())
+      );
+    }
+    
+    if (activeCategory !== 'ทั้งหมด') {
+      result = result.filter(r => r.category === activeCategory);
+    }
+    
+    if (sortOrder !== 'none') {
+      result = [...result].sort((a, b) => sortOrder === 'asc' ? a.points - b.points : b.points - a.points);
     }
     
     return result;
-  }, [activeCategory, sortOrder]);
+  }, [activeCategory, sortOrder, debouncedSearch]);
 
   const toggleSort = () => {
     if (sortOrder === 'none') setSortOrder('asc');
@@ -106,7 +100,12 @@ const Rewards: React.FC<RewardsProps> = ({ user }) => {
         <div className="px-4 py-4 flex gap-2">
            <div className="flex-1 flex items-center rounded-xl bg-gray-100 px-4 h-12 shadow-inner">
              <span className="material-symbols-outlined text-gray-400">search</span>
-             <input className="bg-transparent border-none focus:ring-0 text-sm flex-1 ml-2 placeholder-gray-400" placeholder="ค้นหาของรางวัล..." />
+             <input 
+               className="bg-transparent border-none focus:ring-0 text-sm flex-1 ml-2 placeholder-gray-400" 
+               placeholder="ค้นหาของรางวัล..." 
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+             />
            </div>
            <button 
              onClick={toggleSort}
@@ -147,7 +146,9 @@ const Rewards: React.FC<RewardsProps> = ({ user }) => {
       </header>
 
       <div className="flex-1 p-4 pb-32 space-y-6">
-        {processedRewards.length > 0 ? processedRewards.map(reward => (
+        {isLoading ? (
+          <SkeletonCard variant="default" count={3} />
+        ) : filteredRewards.length > 0 ? filteredRewards.map(reward => (
           <div key={reward.id} className="bg-white rounded-[1.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
             <div className="relative aspect-[16/9]">
               <div 
@@ -233,11 +234,11 @@ const Rewards: React.FC<RewardsProps> = ({ user }) => {
             
             <div className="w-full space-y-4">
               <button 
-                onClick={() => navigate('/coupons')}
+                onClick={confirmRedeem}
                 className="w-full bg-dark-green text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2"
               >
-                <span className="material-symbols-outlined text-lg">confirmation_number</span>
-                ไปที่คูปองของฉัน
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                ยืนยันการแลก
               </button>
               <button 
                 onClick={() => setShowSuccessModal(false)}

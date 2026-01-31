@@ -1,14 +1,18 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWallet } from '../contexts/WalletContext';
+import { useAuth } from '../contexts/AuthContext';
+import SkeletonCard from '../components/SkeletonCard';
 import { User, Transaction } from '../types';
 
 interface WalletProps {
   user: User;
 }
 
-const Wallet: React.FC<WalletProps> = ({ user }) => {
+const Wallet: React.FC<WalletProps> = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { balance, transactions: walletTransactions, isLoading, refreshBalance } = useWallet();
 
   const transactions: Transaction[] = [
     {

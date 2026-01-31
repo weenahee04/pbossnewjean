@@ -1,16 +1,23 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 import { User } from '../types';
 
 interface ProfileProps {
   user: User;
-  onLogout: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ user, onLogout }) => {
+const Profile: React.FC<ProfileProps> = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    toast.success('ออกจากระบบสำเร็จ');
+    navigate('/login');
+  };
 
   const sections = [
     {
@@ -111,7 +118,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout }) => {
               <p className="text-sm text-gray-500 mb-8">คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบบัญชี Jespark?</p>
               <div className="flex flex-col gap-3">
                 <button 
-                  onClick={onLogout}
+                  onClick={handleLogout}
                   className="w-full py-3.5 rounded-xl bg-dark-green text-white font-bold text-sm shadow-lg active:scale-95 transition-transform"
                 >
                   ออกจากระบบ

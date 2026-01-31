@@ -1,21 +1,24 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 import { User } from '../types';
 
 interface SettingsProps {
-  user: User;
-  setUser: React.Dispatch<React.SetStateAction<User>>;
 }
 
-const Settings: React.FC<SettingsProps> = ({ user, setUser }) => {
+const Settings: React.FC<SettingsProps> = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState(user.name);
+  const { user, updateUser } = useAuth();
+  const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState('alex.johnson@jespark.com');
 
   const handleSave = () => {
-    setUser({ ...user, name });
-    navigate(-1);
+    if (user) {
+      updateUser({ name });
+      toast.success('บันทึกข้อมูลสำเร็จ');
+      navigate(-1);
+    }
   };
 
   return (

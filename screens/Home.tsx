@@ -1,44 +1,49 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '../contexts/NotificationContext';
+import { useDeals } from '../contexts/DealsContext';
+import { useBrands } from '../contexts/BrandsContext';
+import { useAuth } from '../contexts/AuthContext';
+import bannersService from '../services/bannersService';
+import SkeletonCard from '../components/SkeletonCard';
 import { User, Deal, Reward } from '../types';
 
 interface HomeProps {
   user: User;
 }
 
-const Home: React.FC<HomeProps> = ({ user }) => {
+const Home: React.FC<HomeProps> = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { unreadCount } = useNotifications();
+  const { latestDeals, specialOffers, fetchLatestDeals, fetchSpecialOffers, isLoading: dealsLoading } = useDeals();
+  const { recommendedBrands, fetchRecommendedBrands, isLoading: brandsLoading } = useBrands();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [banners, setBanners] = useState<any[]>([]);
+  const [bannersLoading, setBannersLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const banners = [
-    {
-      id: 'bn1',
-      title: 'Double Points Weekend',
-      subtitle: 'รับคะแนนคูณ 2 ทุกการสั่งซื้อเครื่องดื่มตลอดสุดสัปดาห์นี้',
-      image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=1200',
-      buttonText: 'ดูรายละเอียด',
-      color: 'from-dark-green/90 to-transparent'
-    },
-    {
-      id: 'bn2',
-      title: 'Jespark x Starbucks',
-      subtitle: 'แลกรับส่วนลดพิเศษ 50% สำหรับเมนูใหม่ล่าสุด',
-      image: 'https://images.unsplash.com/photo-1544787210-2213d4b2d501?auto=format&fit=crop&q=80&w=1200',
-      buttonText: 'แลกเลย',
-      color: 'from-primary-dark/90 to-transparent'
-    },
-    {
-      id: 'bn3',
-      title: 'New Store Opening',
-      subtitle: 'พบกับสาขาใหม่ใจกลางเมือง พร้อมของแถมพิเศษเพียบ!',
-      image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&q=80&w=1200',
-      buttonText: 'เช็คสาขา',
-      color: 'from-black/70 to-transparent'
-    }
-  ];
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const bannersData = await bannersService.getActiveBanners();
+        setBanners(bannersData.map((b: any) => ({
+          ...b,
+          color: 'from-dark-green/90 to-transparent'
+        })));
+      } catch (error) {
+        console.error('Error loading banners:', error);
+      } finally {
+        setBannersLoading(false);
+      }
+    };
+
+    loadData();
+    fetchLatestDeals(2);
+    fetchSpecialOffers(2);
+    fetchRecommendedBrands(8);
+  }, [fetchLatestDeals, fetchSpecialOffers, fetchRecommendedBrands]);
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -46,50 +51,6 @@ const Home: React.FC<HomeProps> = ({ user }) => {
       setCurrentBanner(index);
     }
   };
-
-  const recommendedBrands = [
-    { id: 'b1', name: 'Starbucks', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDFpHP7ypyvvPB2HdiLPAN61U09KAClGg9egyPVrQ1mabu-2ie1R4AiGH7VYdXwOnMpJ1lbwmtMngvQ_oUJP8Vdl4NxsNicAcVlVd7TgLSIYQxjHmEuPD16VPVnXkBg0oAo2jJ50FnswlxpgIox4sRXGsn9fSD_MVsVDzhrKPYwOQtHP-H_JQu5fz5NruPNIESZoTQ7xlWMSP7MSYP9qzhByMValV1WVGaOdPMvS274PsA1HQ52QfDMTHz3O9itq2RPlOUESMH8Iuy7' },
-    { id: 'b2', name: 'Burger King', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD6LJYBHHFZSoQy3Wg_vzaY4q7StRQxRADyvCwr3oPbcE-wic6aYxSavAaRJj_hBIKpLbPaBP2n3OIZO5Nkhikp0Aeg9UXGfHt1bjUytNPxIl2tCpFhH50GI4iXzvzPqSopMwp-1XQwKL3xiYoiyo6nGyhaMBeC8iSrVYwWKH1ssDvhj_yKn2TmfdeMTgl6aWzo6zZ5o4_kPsTdioDBph4unqllG7hciiaLUJRt3r5n641neGh_VxTjy0_Sf4FEtssjdMk_DuWJedIk' },
-    { id: 'b3', name: 'Zara', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCsMksrSYzQxxwOhIaiOrdGpCMKOBnT_fX1_rEh7tm6S_TNG1Pvfa0sF9SfIY63tx81PqORGYeygBgOF2TS13v6tafJtlR7jHZQRsLRDNxMq67mr8GOpYalhfiPe2YXCizl369CBuUb31myVrpJmrmNFeTO9rukNVYsJcY7xCcv5-n5kSJmykWwBFU_QDXcyLZpMpKmP7z2kX91bmHNW_2aqfe3k808rHZSUiTEsyb2BnKlbiQto8gO5ENnstlqeJ4gsjlk0R4XsXnT' },
-    { id: 'b4', name: 'Apple Store', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNwxxwP83tAK8CPoyX5fKQBD9KtnuPwOHFQRSOpR9xie_0Z5P9Ysby5kuTkWQDdhvIKEi5-ByLvLvxcb9ouB0zSrKHfclVUTSJM9sWJ50xEPsUIHAe4caMDAAj2LB9XPj33buwzF7g38-jazaemBjS4B6AZ4M3dqL6xWbG0LCAsBioWlY8DLdNu0yY94TqK4AsRlduGiw_W745tva3tD7TLz-aDdWVqyEcN70Xquib3HWPh5JdK2jv6v9_4Ne-LxEkXAfOVUephbCX' },
-    { id: 'b5', name: 'Coffee House', logo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBOkrrkrPaoAYrwTZjX7zCAYcHaou2cHClYHB6jcKvNOFfRr8-rB7ucRVWjNdwJiEh1IRYJVaBkPo-u5dFeVyi61Czwb92neJeBDKrBljIm4tSf6jdhEkCz7aXi8lheu55IAYyhoz2-IqW4Rgl804C1LeSDX4iiTyLcyINe17-Ik5s5VvA5KyKBJQatWdDM4OK2fOO0BXF7Xzc_uyKIZoVaQIXUphgGBslESzWaDUVGqbevHK9I8VqDk_43wkeQXULKtF4QMV6y_qMv' }
-  ];
-
-  const deals: Deal[] = [
-    {
-      id: '1',
-      title: 'สดชื่นรับซัมเมอร์',
-      subtitle: 'รับคะแนน x2 สำหรับเมนูชาเย็นทุกรายการ',
-      tag: 'ยอดนิยม',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCYUdalIHIIwvOgXgm-58V-uHRqDiaezZoWCHpRCUvpHE3DPaFQG7afxwDLueMMK3V5XfN0yFj2zxVU0tCyPsyz6BOyh3YBw1Heh52vBqUKfHIKKTDPec8huuKMwCMmrCb6n8ZfQ4v6WRePFZWDEFkBWWcB8zrVXuSNixXllbfO2EzmCmqByLhAOgOUlf0Fd8kZHJZG27JbN0FzzdB9Pw2PASH7ql11KUrJbMGCp_MR2rvmnyyK5O84cZEBTrL3CceEhibNXj6yZTMf'
-    },
-    {
-      id: '2',
-      title: 'โบนัสไอที',
-      subtitle: 'รับฟรี 500 คะแนน เมื่อซื้ออุปกรณ์ไอที',
-      tag: 'พาร์ทเนอร์',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDNwxxwP83tAK8CPoyX5fKQBD9KtnuPwOHFQRSOpR9xie_0Z5P9Ysby5kuTkWQDdhvIKEi5-ByLvLvxcb9ouB0zSrKHfclVUTSJM9sWJ50xEPsUIHAe4caMDAAj2LB9XPj33buwzF7g38-jazaemBjS4B6AZ4M3dqL6xWbG0LCAsBioWlY8DLdNu0yY94TqK4AsRlduGiw_W745tva3tD7TLz-aDdWVqyEcN70Xquib3HWPh5JdK2jv6v9_4Ne-LxEkXAfOVUephbCX'
-    }
-  ];
-
-  const specialOffers: Reward[] = [
-    {
-      id: 's1',
-      title: 'ชุดคอมโบมื้อเช้า',
-      description: 'ใช้ได้ถึง 24 ต.ค. นี้',
-      points: 850,
-      category: 'อาหาร',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCV9q2NoqqZX0evj0zH1KwEk7vbHLRBfpXygNxZNYqpPJFAVanCqQY7-SbaBvjNLJKg3_C5FZAD48YgnfQzJXHkr8bIlwcWecIq2lfyNDuvk_awWPSuP12nn95qjQVvRTWUY6UlcJAPAg8fTGgszNZb2wCAQp1txivHmsSx-QXpaVkNLT4O_FBa8DkySa6CnkiO85jKVx60cifkJON0XRsT4mRHhJYMR5RPvhs68e5bTb1bTJ0xW5CyCc7J54F8-ewlbNqhcwktbA6i'
-    },
-    {
-      id: 's2',
-      title: 'เซตสกินแคร์หน้าใส',
-      description: 'รางวัลพิเศษจำนวนจำกัด',
-      points: 3200,
-      category: 'ไลฟ์สไตล์',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCCz65zieJQ-LhzUPxDKQG0X1zH1PxrGMiitqicShaoS8Twu27cSWlNTcBav9tz_sDnfR7dr7XwnLouZgTES1-5BaR0RnLgW5f9MbbmH0EUunt5-Joj9-OG3h5z5pglomgW1JjXScc5ZVskbbTM9oqghqpFaavWXBcZEk8deF_gUGPb_QpRkCmBJmKU5rPgmzRSZ2ooakYMYWbhI-iX5DcQ0mCtvZ15D6Wdttmyk2F5wI_vZS_rLbP7FuLcLYIZFiuA-GUS7go8ZI-G'
-    }
-  ];
 
   return (
     <div className="flex flex-col pb-24 animate-fade-in relative z-10">
@@ -111,9 +72,15 @@ const Home: React.FC<HomeProps> = ({ user }) => {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => navigate('/notifications')}
-              className="flex size-10 items-center justify-center rounded-full bg-gray-100/50 backdrop-blur-sm"
+              className="flex size-10 items-center justify-center rounded-full bg-gray-100/50 backdrop-blur-sm relative"
+              aria-label={`การแจ้งเตือน${unreadCount > 0 ? ` ${unreadCount} รายการใหม่` : ''}`}
             >
-              <span className="material-symbols-outlined">notifications</span>
+              <span className="material-symbols-outlined" aria-hidden="true">notifications</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -148,7 +115,22 @@ const Home: React.FC<HomeProps> = ({ user }) => {
           onScroll={handleScroll}
           className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory gap-4"
         >
-          {banners.map((banner) => (
+          {bannersLoading ? (
+            <div className="flex gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="relative min-w-full snap-center h-48 rounded-2xl overflow-hidden shadow-lg">
+                  <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                  <div className="relative h-full flex flex-col justify-center p-6 gap-2">
+                    <h3 className="text-white text-xl font-black leading-tight animate-pulse">Loading...</h3>
+                    <p className="text-white/80 text-xs font-bold leading-snug max-w-[200px] animate-pulse">Loading...</p>
+                    <button className="mt-2 w-fit bg-primary text-dark-green text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-transform">
+                      Loading...
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : banners.map((banner) => (
             <div 
               key={banner.id} 
               className="relative min-w-full snap-center h-48 rounded-2xl overflow-hidden shadow-lg"
@@ -159,8 +141,8 @@ const Home: React.FC<HomeProps> = ({ user }) => {
               />
               <div className={`absolute inset-0 bg-gradient-to-r ${banner.color}`} />
               <div className="relative h-full flex flex-col justify-center p-6 gap-2">
-                <h3 className="text-white text-xl font-black leading-tight drop-shadow-md">{banner.title}</h3>
-                <p className="text-white/80 text-xs font-bold leading-snug max-w-[200px] drop-shadow-sm">{banner.subtitle}</p>
+                <h3 className="text-white text-xl font-black leading-tight">{banner.title}</h3>
+                <p className="text-white/80 text-xs font-bold leading-snug max-w-[200px]">{banner.subtitle}</p>
                 <button className="mt-2 w-fit bg-primary text-dark-green text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-transform">
                   {banner.buttonText}
                 </button>
@@ -240,7 +222,16 @@ const Home: React.FC<HomeProps> = ({ user }) => {
           <h2 className="text-dark-green text-xl font-bold tracking-tight">แบรนด์แนะนำ</h2>
         </div>
         <div className="flex overflow-x-auto no-scrollbar gap-5 pb-2">
-          {recommendedBrands.map((brand) => (
+          {brandsLoading ? (
+            <div className="flex gap-5">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex flex-col items-center gap-2 shrink-0">
+                  <div className="size-16 rounded-full bg-gray-200 animate-pulse" />
+                  <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : recommendedBrands.map((brand) => (
             <div key={brand.id} className="flex flex-col items-center gap-2 shrink-0 active:scale-90 transition-transform cursor-pointer">
               <div className="size-16 rounded-full overflow-hidden border border-gray-100 shadow-sm bg-white/80 backdrop-blur-sm">
                 <div 
@@ -261,7 +252,17 @@ const Home: React.FC<HomeProps> = ({ user }) => {
       </div>
       <div className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory">
         <div className="flex px-4 pt-2 gap-4 pb-4">
-          {deals.map((deal) => (
+          {dealsLoading ? (
+            <div className="flex gap-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="min-w-[280px]">
+                  <div className="w-full aspect-[16/9] bg-gray-200 rounded-xl animate-pulse mb-3" />
+                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
+                  <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4" />
+                </div>
+              ))}
+            </div>
+          ) : latestDeals.map((deal) => (
             <div key={deal.id} className="flex flex-col gap-3 rounded-xl min-w-[280px] snap-center">
               <div 
                 className="w-full bg-center bg-no-repeat aspect-[16/9] bg-cover rounded-xl shadow-md border border-gray-100 overflow-hidden" 
@@ -285,7 +286,9 @@ const Home: React.FC<HomeProps> = ({ user }) => {
         <h2 className="text-dark-green text-xl font-bold tracking-tight">สิทธิพิเศษสำหรับคุณ</h2>
       </div>
       <div className="px-4 space-y-4">
-        {specialOffers.map((offer) => (
+        {dealsLoading ? (
+          <SkeletonCard variant="horizontal" count={2} />
+        ) : specialOffers.map((offer) => (
           <div key={offer.id} className="flex items-center gap-4 bg-white/40 backdrop-blur-md p-3 rounded-xl border border-white/50 shadow-sm">
             <div 
               className="size-20 bg-center bg-cover rounded-lg shrink-0 border border-gray-100" 
